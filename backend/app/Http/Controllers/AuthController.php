@@ -17,12 +17,10 @@ class AuthController extends Controller
     {
         $request->validate([
             'email' => 'required|email',
-            'password' => 'required',
+            'password' => 'required|string|max:255',
         ]);
 
-        $credentials = $request->validated();
-
-        if (!Auth::attempt($credentials)) {
+        if (!Auth::attempt($request->only('email', 'password'))) {
             return response()->json(
                 [
                     'message' => 'Invalid login credentials',
@@ -82,7 +80,7 @@ class AuthController extends Controller
         ]);
     }
 
-    public function user()
+    public function me()
     {
         $user = Auth::user();
 

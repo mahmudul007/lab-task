@@ -1,17 +1,40 @@
+import { logInAPI } from '@/api/api';
+import useTokenStore from '@/store';
+import type { LoginData } from '@/types/auth';
+import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const navigate = useNavigate();
+  const setToken = useTokenStore((state) => state.setToken);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const mutation = useMutation({
+    mutationFn: async (data: LoginData) => {
+      return logInAPI(data);
+    },
+    onSuccess: async (response: any) => {
+
+      if (response.data.data.token) {
+        setToken(response.data.data.token);
+        toast.success('logged in successfully');
+        navigate('/feed');
+      }
+    },
+    onError: (error: any) => {
+      console.log(error)
+      toast.error(error?.response?.data?.message || 'Login failed. Please try again.');
+    }
+  });
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Navigate to feed after login
-    navigate('/feed');
+    mutation.mutate({ email, password });
   };
+
 
   return (
     <section className="_social_login_wrapper _layout_main_wrapper">
@@ -104,8 +127,9 @@ const LoginPage = () => {
                   <div className="row">
                     <div className="col-lg-12 col-md-12 col-xl-12 col-sm-12">
                       <div className="_social_login_form_btn _mar_t40 _mar_b60">
-                        <button type="submit" className="_social_login_form_btn_link _btn1">
-                          Login now
+                        <button type="submit" className="_social_login_form_btn_link _btn1"
+                          disabled={mutation.isPending} >
+                          {mutation.isPending ? 'Logging in...' : 'Login now'}
                         </button>
                       </div>
                     </div>
