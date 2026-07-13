@@ -1,5 +1,6 @@
 import useTokenStore from "@/store";
 import type { LoginData, RegisterData } from "@/types/auth";
+import type { CreatePostData } from "@/types/post";
 import axios from "axios";
 
 
@@ -61,3 +62,31 @@ export const logInAPI= (data: LoginData): Promise<any> => {
 export const getCurrentUser = () => {
   return api.get("/auth/me");
 };
+export const logOut = () => {
+  return api.get("/auth/logout");
+};
+export const createPost = (data: CreatePostData): Promise<any> => {
+  return api.post("/posts", data);
+};
+export const getPosts = () => {
+  return api.get("/posts");
+};
+export const postLike = (postId: string) => {
+  return api.post(`/posts/${postId}/like`);
+};
+export const postUnlike = (postId: string) => {
+  return api.delete(`/posts/${postId}/like`);
+};
+export const commentPost = (postId: string, comment: string) => {
+  return api.post(`/posts/${postId}/comment`, { comment });
+};
+export const postCommentDelete = (commentId: string) => {
+  return api.delete(`/comments/${commentId}`);
+};
+export const commentLike = (commentId: string) => {
+  return api.post(`/comments/${commentId}/like`);
+};
+export const commentUnlike = (commentId: string) => {
+  return api.delete(`/comments/${commentId}/like`);
+};
+

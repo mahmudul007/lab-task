@@ -12,7 +12,6 @@ return new class extends Migration
             $table->id();
             $table->foreignId('created_by')->constrained('users')->onDelete('cascade');
             $table->text('text_content')->nullable();
-            $table->string('image_url')->nullable();
             $table->boolean('is_private')->default(false);
             $table->timestamps();
 
