@@ -11,6 +11,11 @@ export const baseURL =
     ? import.meta.env.VITE_BASE_URL
     : import.meta.env.VITE_PROD_URL;
 
+export const mediaUrl =
+  environment === "local"
+    ? import.meta.env.VITE_MEDIA_LOCAL_URL
+    : import.meta.env.VITE_MEDIA_PROD_URL;
+
 export const api = axios.create({
   baseURL: baseURL,
   headers: {

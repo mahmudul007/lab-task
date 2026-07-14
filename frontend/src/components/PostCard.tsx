@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { togglePostLike } from '../api/api';
+import { mediaUrl, togglePostLike } from '../api/api';
 import type { Post } from '@/types/post';
 import { CommentSection } from './post/CommentSection';
 import { LikersModal } from './post/LikersModal';
@@ -107,7 +107,7 @@ const PostCard = ({ post }: { post: Post }) => {
         )}
         {postImages.map((src, i) => (
           <div className="_feed_inner_timeline_image" key={i}>
-            <img src={src} alt="" className="_time_img" />
+            <img src={mediaUrl + src} alt="" className="_time_img" />
           </div>
         ))}
       </div>
