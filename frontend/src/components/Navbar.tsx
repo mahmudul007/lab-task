@@ -1,9 +1,29 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useMutation } from '@tanstack/react-query';
+import useTokenStore from '@/store';
+import { logOut } from '@/api/api';
 
 const Navbar = () => {
   const [notifyOpen, setNotifyOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const navigate = useNavigate();
+
+  const user = useTokenStore((s) => s.user);
+  const clearSession = useTokenStore((s) => s.clearSession);
+
+  const displayName = user
+    ? `${user.first_name} ${user.last_name}`.trim()
+    : 'Guest';
+
+  const { mutate: handleLogout, isPending: loggingOut } = useMutation({
+    mutationFn: logOut,
+    onSettled: () => {
+      clearSession();
+      navigate('/login');
+    }
+
+  });
 
   return (
     <>
@@ -121,7 +141,7 @@ const Navbar = () => {
                 <img src="/images/profile.png" alt="Image" className="_nav_profile_img" />
               </div>
               <div className="_header_nav_dropdown">
-                <p className="_header_nav_para">Dylan Field</p>
+                <p className="_header_nav_para">{displayName}</p>
                 <button
                   id="_profile_drop_show_btn"
                   className="_header_nav_dropdown_btn _dropdown_toggle"
@@ -139,7 +159,7 @@ const Navbar = () => {
                     <img src="/images/profile.png" alt="Image" className="_nav_drop_img" />
                   </div>
                   <div className="_nav_profile_dropdown_info_txt">
-                    <h4 className="_nav_dropdown_title">Dylan Field</h4>
+                    <h4 className="_nav_dropdown_title">{displayName}</h4>
                     <a href="#0" className="_nav_drop_profile">View Profile</a>
                   </div>
                 </div>
@@ -160,11 +180,17 @@ const Navbar = () => {
                     </a>
                   </li>
                   <li className="_nav_dropdown_list_item">
-                    <Link to="/login" className="_nav_dropdown_link">
+                    <button
+                      type="button"
+                      onClick={() => handleLogout()}
+                      disabled={loggingOut}
+                      className="_nav_dropdown_link"
+                      style={{ background: 'none', border: 'none', width: '100%', textAlign: 'left', cursor: loggingOut ? 'not-allowed' : 'pointer', padding: 0, opacity: loggingOut ? 0.6 : 1 }}
+                    >
                       <div className="_nav_drop_info">
-                        <span>🚪</span> Log Out
+                        <span>🚪</span> {loggingOut ? 'Logging out…' : 'Log Out'}
                       </div>
-                    </Link>
+                    </button>
                   </li>
                 </ul>
               </div>

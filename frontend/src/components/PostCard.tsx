@@ -1,82 +1,66 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { togglePostLike } from '../api/api';
-
-interface PostImage {
-  id: number;
-  image_url: string;
-}
-
-interface PostUser {
-  id: number;
-  first_name: string;
-  last_name: string;
-}
-
-interface Post {
-  id: number;
-  user?: PostUser;
-  // legacy static fields (kept for backwards compat)
-  author?: string;
-  authorImg?: string;
-  time?: string;
-  title?: string;
-  postImg?: string;
-  reactions?: number;
-  comments?: number;
-  shares?: number;
-  // API fields
-  text_content?: string;
-  is_private?: boolean;
-  images?: PostImage[];
-  likes_count?: number;
-  comments_count?: number;
-  created_at?: string;
-}
-
-const timeAgo = (dateStr: string) => {
-  const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
-  if (diff < 60) return `${diff}s ago`;
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  return `${Math.floor(diff / 86400)}d ago`;
-};
+import type { Post } from '@/types/post';
+import { CommentSection } from './post/CommentSection';
+import { LikersModal } from './post/LikersModal';
+import { fullName, timeAgo } from './post/helpers';
+import { ThumbsUpIcon } from 'lucide-react';
 
 const PostCard = ({ post }: { post: Post }) => {
   const queryClient = useQueryClient();
   const [dropOpen, setDropOpen] = useState(false);
-  const [comment, setComment] = useState('');
+  const [showComments, setShowComments] = useState(false);
+  const [showLikers, setShowLikers] = useState(false);
 
+  // Optimistic like state — use PostResource field names
+  const [isLiked, setIsLiked] = useState(post.is_liked_by_me ?? false);
+  const [likeCount, setLikeCount] = useState(post.like_count ?? 0);
+
+  // Post like toggle
   const { mutate: handleLike, isPending: liking } = useMutation({
     mutationFn: () => togglePostLike(post.id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['posts'] }),
+    onMutate: () => {
+      const wasLiked = isLiked;
+      setIsLiked(!wasLiked);
+      setLikeCount((n) => (wasLiked ? n - 1 : n + 1));
+      return { wasLiked };
+    },
+    onError: (_err, _vars, ctx) => {
+      setIsLiked(ctx!.wasLiked);
+      setLikeCount((n) => (ctx!.wasLiked ? n + 1 : n - 1));
+    },
+    onSuccess: (data) => {
+      // Sync server truth: PostController returns { data: { liked, like_count } }
+      const serverLiked: boolean = data?.data?.data?.liked ?? isLiked;
+      const serverCount: number = data?.data?.data?.like_count ?? likeCount;
+      setIsLiked(serverLiked);
+      setLikeCount(serverCount);
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
+    },
   });
 
-  const authorName = post.user?.first_name + ' ' + post.user?.last_name;
-  const authorImg = '/images/post_img.png';
+  // Derived display values
+  const authorName = fullName(post.user);
   const postTime = post.created_at ? timeAgo(post.created_at) : '';
   const bodyText = post.text_content ?? '';
   const isPrivate = post.is_private ?? false;
-  const reactions = post.likes_count ?? 0;
-  const commentsCount = post.comments_count ?? 0;
-  const shares = post.shares ?? 0;
+  const commentCount = post.comment_count ?? 0;
 
   const postImages: string[] =
     post.images && post.images.length > 0
       ? post.images.map((img) => img.image_url)
-      : post.postImg
-        ? [post.postImg]
-        : [];
-
-
+      : [];
 
   return (
     <div className="_feed_inner_timeline_post_area _b_radious6 _padd_b24 _padd_t24 _mar_b16">
       <div className="_feed_inner_timeline_content _padd_r24 _padd_l24">
+
+        {/* ── Header ── */}
         <div className="_feed_inner_timeline_post_top">
           <div className="_feed_inner_timeline_post_box">
             <div className="_feed_inner_timeline_post_box_image">
-              <img src={authorImg} alt="" className="_post_img" />
+              <img src="/images/post_img.png" alt="" className="_post_img" />
             </div>
             <div className="_feed_inner_timeline_post_box_txt">
               <h4 className="_feed_inner_timeline_post_box_title">{authorName}</h4>
@@ -86,11 +70,13 @@ const PostCard = ({ post }: { post: Post }) => {
               </p>
             </div>
           </div>
+
+          {/* Dropdown */}
           <div className="_feed_inner_timeline_post_box_dropdown">
             <div className="_feed_timeline_post_dropdown">
               <button
                 className="_feed_timeline_post_dropdown_link"
-                onClick={() => setDropOpen(!dropOpen)}
+                onClick={() => setDropOpen((v) => !v)}
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="4" height="17" fill="none" viewBox="0 0 4 17">
                   <circle cx="2" cy="2" r="2" fill="#C4C4C4" />
@@ -102,21 +88,23 @@ const PostCard = ({ post }: { post: Post }) => {
             {dropOpen && (
               <div className="_feed_timeline_dropdown _timeline_dropdown show">
                 <ul className="_feed_timeline_dropdown_list">
-                  {['Save Post', 'Turn On Notification', 'Hide', 'Edit Post', 'Delete Post'].map((item) => (
-                    <li className="_feed_timeline_dropdown_item" key={item}>
-                      <a href="#0" className="_feed_timeline_dropdown_link">{item}</a>
-                    </li>
-                  ))}
+                  {['Save Post', 'Turn On Notification', 'Hide', 'Edit Post', 'Delete Post'].map(
+                    (item) => (
+                      <li className="_feed_timeline_dropdown_item" key={item}>
+                        <a href="#0" className="_feed_timeline_dropdown_link">{item}</a>
+                      </li>
+                    )
+                  )}
                 </ul>
               </div>
             )}
           </div>
         </div>
 
+        {/* ── Body ── */}
         {bodyText && (
           <h4 className="_feed_inner_timeline_post_title">{bodyText}</h4>
         )}
-
         {postImages.map((src, i) => (
           <div className="_feed_inner_timeline_image" key={i}>
             <img src={src} alt="" className="_time_img" />
@@ -124,42 +112,59 @@ const PostCard = ({ post }: { post: Post }) => {
         ))}
       </div>
 
+      {/* ── Reaction summary ── */}
       <div className="_feed_inner_timeline_total_reacts _padd_r24 _padd_l24 _mar_b26">
-        <div className="_feed_inner_timeline_total_reacts_image">
-          <img src="/images/react_img1.png" alt="Image" className="_react_img1" />
-          <img src="/images/react_img2.png" alt="Image" className="_react_img" />
-          <img src="/images/react_img3.png" alt="Image" className="_react_img _rect_img_mbl_none" />
-          <img src="/images/react_img4.png" alt="Image" className="_react_img _rect_img_mbl_none" />
-          <img src="/images/react_img5.png" alt="Image" className="_react_img _rect_img_mbl_none" />
-          <p className="_feed_inner_timeline_total_reacts_para">{reactions}+</p>
+        <div
+          className="_feed_inner_timeline_total_reacts_image"
+          onClick={() => { if (likeCount > 0) setShowLikers(true); }}
+          style={{ cursor: likeCount > 0 ? 'pointer' : 'default' }}
+        >
+
+          <p className="_feed_inner_timeline_total_reacts_para">{likeCount}+</p>
         </div>
         <div className="_feed_inner_timeline_total_reacts_txt">
           <p className="_feed_inner_timeline_total_reacts_para1">
-            <a href="#0"><span>{commentsCount}</span> Comment</a>
+            <a
+              href="#0"
+              onClick={(e) => { e.preventDefault(); setShowComments((v) => !v); }}
+            >
+              <span>{commentCount}</span> Comment
+            </a>
           </p>
-          <p className="_feed_inner_timeline_total_reacts_para2"><span>{shares}</span> Share</p>
+          <p className="_feed_inner_timeline_total_reacts_para2">
+            <span>0</span> Share
+          </p>
         </div>
       </div>
 
+      {/* ── Action buttons ── */}
       <div className="_feed_inner_timeline_reaction">
+        {/* Like */}
         <button
-          className="_feed_inner_timeline_reaction_emoji _feed_reaction _feed_reaction_active"
+          className={`_feed_inner_timeline_reaction_emoji _feed_reaction${isLiked ? ' _feed_reaction_active' : ''}`}
           onClick={() => handleLike()}
           disabled={liking}
         >
           <span className="_feed_inner_timeline_reaction_link">
             <span>
-              <svg xmlns="http://www.w3.org/2000/svg" width="19" height="19" fill="none" viewBox="0 0 19 19">
-                <path fill="#FFCC4D" d="M9.5 19a9.5 9.5 0 100-19 9.5 9.5 0 000 19z" />
-                <path fill="#664500" d="M9.5 11.083c-1.912 0-3.181-.222-4.75-.527-.358-.07-1.056 0-1.056 1.055 0 2.111 2.425 4.75 5.806 4.75 3.38 0 5.805-2.639 5.805-4.75 0-1.055-.697-1.125-1.055-1.055-1.57.305-2.838.527-4.75.527z" />
-                <path fill="#fff" d="M4.75 11.611s1.583.528 4.75.528 4.75-.528 4.75-.528-1.056 2.111-4.75 2.111-4.75-2.11-4.75-2.11z" />
-                <path fill="#664500" d="M6.333 8.972c.729 0 1.32-.827 1.32-1.847s-.591-1.847-1.32-1.847c-.729 0-1.32.827-1.32 1.847s.591 1.847 1.32 1.847zM12.667 8.972c.729 0 1.32-.827 1.32-1.847s-.591-1.847-1.32-1.847c-.729 0-1.32.827-1.32 1.847s.591 1.847 1.32 1.847z" />
-              </svg>
-              Haha
+              {isLiked ? (
+                <>
+                  <ThumbsUpIcon /> Liked
+                </>
+              ) : (
+                <>
+                  <ThumbsUpIcon /> Like
+                </>
+              )}
             </span>
           </span>
         </button>
-        <button className="_feed_inner_timeline_reaction_comment _feed_reaction">
+
+        {/* Comment toggle */}
+        <button
+          className="_feed_inner_timeline_reaction_comment _feed_reaction"
+          onClick={() => setShowComments((v) => !v)}
+        >
           <span className="_feed_inner_timeline_reaction_link">
             <span>
               <svg className="_reaction_svg" xmlns="http://www.w3.org/2000/svg" width="21" height="21" fill="none" viewBox="0 0 21 21">
@@ -170,6 +175,8 @@ const PostCard = ({ post }: { post: Post }) => {
             </span>
           </span>
         </button>
+
+        {/* Share */}
         <button className="_feed_inner_timeline_reaction_share _feed_reaction">
           <span className="_feed_inner_timeline_reaction_link">
             <span>
@@ -182,70 +189,15 @@ const PostCard = ({ post }: { post: Post }) => {
         </button>
       </div>
 
-      <div className="_feed_inner_timeline_cooment_area">
-        <div className="_feed_inner_comment_box">
-          <form className="_feed_inner_comment_box_form" onSubmit={(e) => e.preventDefault()}>
-            <div className="_feed_inner_comment_box_content">
-              <div className="_feed_inner_comment_box_content_image">
-                <img src="/images/comment_img.png" alt="" className="_comment_img" />
-              </div>
-              <div className="_feed_inner_comment_box_content_txt">
-                <textarea
-                  className="form-control _comment_textarea"
-                  placeholder="Write a comment"
-                  value={comment}
-                  onChange={(e) => setComment(e.target.value)}
-                ></textarea>
-              </div>
-            </div>
-          </form>
-        </div>
-        <div className="_timline_comment_main">
-          <div className="_previous_comment">
-            <button type="button" className="_previous_comment_txt">View 4 previous comments</button>
-          </div>
-          <div className="_comment_main">
-            <div className="_comment_image">
-              <a href="#0" className="_comment_image_link">
-                <img src="/images/txt_img.png" alt="" className="_comment_img1" />
-              </a>
-            </div>
-            <div className="_comment_area">
-              <div className="_comment_details">
-                <div className="_comment_details_top">
-                  <div className="_comment_name">
-                    <a href="#0">
-                      <h4 className="_comment_name_title">Radovan SkillArena</h4>
-                    </a>
-                  </div>
-                </div>
-                <div className="_comment_status">
-                  <p className="_comment_status_text">
-                    <span>It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout.</span>
-                  </p>
-                </div>
-                <div className="_total_reactions">
-                  <div className="_total_react">
-                    <span className="_reaction_like">👍</span>
-                    <span className="_reaction_heart">❤️</span>
-                  </div>
-                  <span className="_total">198</span>
-                </div>
-                <div className="_comment_reply">
-                  <div className="_comment_reply_num">
-                    <ul className="_comment_reply_list">
-                      <li><span>Like.</span></li>
-                      <li><span>Reply.</span></li>
-                      <li><span>Share</span></li>
-                      <li><span className="_time_link">.21m</span></li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* ── Comments section (lazy — only mounts when opened) ── */}
+      {showComments && <CommentSection post={post} />}
+      {showLikers && (
+        <LikersModal
+          type="post"
+          id={post.id}
+          onClose={() => setShowLikers(false)}
+        />
+      )}
     </div>
   );
 };

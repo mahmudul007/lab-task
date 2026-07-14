@@ -11,7 +11,6 @@ use App\Models\PostLike;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 class PostController extends Controller
@@ -177,7 +176,8 @@ class PostController extends Controller
 
     public function likers(Request $request, $postId)
     {
-        $likers = PostLike::with('user')->where('post_id', $postId)->paginate(20);
+        $paginate = $request->input('paginate', 20);
+        $likers = PostLike::with('user')->where('post_id', $postId)->paginate($paginate);
         return response()->json(['data' => $likers]);
     }
 }

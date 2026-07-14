@@ -76,22 +76,37 @@ export const createPost = (data: CreatePostData): Promise<any> => {
     headers: { "Content-Type": "multipart/form-data" },
   });
 };
-export const getPosts = () => {
-  return api.get("/posts");
+export const getPosts = (page?: number) => {
+  return api.get("/posts", { params: { page } });
 };
 export const togglePostLike = (postId: string | number) => {
   return api.get(`/posts/${postId}/like`);
 };
-export const commentPost = (postId: string, comment: string) => {
-  return api.post(`/posts/${postId}/comment`, { comment });
+export const getPostComments = (postId: string | number, page?: number) => {
+  return api.get(`/posts/${postId}/comments`, { params: { page } });
 };
-export const postCommentDelete = (commentId: string) => {
+export const commentPost = (postId: string | number, text_content: string) => {
+  return api.post(`/posts/${postId}/comments`, { text_content });
+};
+export const postCommentDelete = (commentId: string | number) => {
   return api.delete(`/comments/${commentId}`);
 };
-export const commentLike = (commentId: string) => {
+export const toggleCommentLike = (commentId: string | number) => {
   return api.post(`/comments/${commentId}/like`);
 };
-export const commentUnlike = (commentId: string) => {
-  return api.delete(`/comments/${commentId}/like`);
+export const getCommentReplies = (commentId: string | number, page?: number) => {
+  return api.get(`/comments/${commentId}/replies`, { params: { page } });
 };
+export const replyComment = (commentId: string | number, text_content: string) => {
+  return api.post(`/comments/${commentId}/replies`, { text_content });
+};
+// post likers
+export const getPostLikers = (postId: string | number, page?: number) => {
+  return api.get(`/posts/${postId}/likers`, { params: { page } });
+};
+// comment likers
+export const getCommentLikers = (commentId: string | number, page?: number) => {
+  return api.get(`/comments/${commentId}/likers`, { params: { page } });
+};
+
 
