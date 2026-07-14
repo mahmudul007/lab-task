@@ -27,7 +27,7 @@ class PostController extends Controller
                 $q->where('is_private', true)->where('created_by', $user->id);
             })
             ->orderByDesc('created_at')
-            ->paginate(20);
+            ->paginate(10);
         return new PostCollection($posts);
     }
 
@@ -176,8 +176,7 @@ class PostController extends Controller
 
     public function likers(Request $request, $postId)
     {
-        $paginate = $request->input('paginate', 20);
-        $likers = PostLike::with('user')->where('post_id', $postId)->paginate($paginate);
+        $likers = PostLike::with('user')->where('post_id', $postId)->paginate(20);
         return response()->json(['data' => $likers]);
     }
 }

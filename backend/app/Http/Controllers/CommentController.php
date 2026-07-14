@@ -55,11 +55,10 @@ class CommentController extends Controller
     public function replies(Request $request, $commentId)
     {
 
-        $paginate = $request->input('paginate', 20);
         $replies = Comment::with('user')
             ->where('parent_comment_id', $commentId)
             ->orderBy('created_at', 'desc')
-            ->paginate($paginate);
+            ->paginate(20);
 
         return new CommentCollection($replies);
     }

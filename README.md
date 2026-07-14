@@ -291,19 +291,19 @@ The `FeedMiddle` component is kept as a thin **orchestrator** — it simply rend
 
 ### Design Decisions (Frontend)
 
-1. **`useInfiniteQuery` for all paginated resources** — Rather than a "load more" button, all lists (posts, comments, replies, likers) use `useInfiniteQuery`. The `InfiniteScrollTrigger` component observes the viewport and calls `fetchNextPage()` automatically, giving a native-app scrolling feel.
 
-2. **Optimistic Updates for Likes** — Like toggles update the UI instantly without waiting for the API response. If the request fails, the state is rolled back to its previous value. This removes perceived latency and makes the app feel fast even on slower connections.
 
-3. **Modular `components/feed/` and `components/post/` directories** — Instead of one large `FeedMiddle.tsx` or `PostCard.tsx`, each concern is split into its own focused component. This makes individual pieces easy to test, maintain, and reason about in isolation.
+1. **Optimistic Updates for Likes** — Like toggles update the UI instantly without waiting for the API response. If the request fails, the state is rolled back to its previous value. This removes perceived latency and makes the app feel fast even on slower connections.
 
-4. **`LikersModal` is type-agnostic** — A single `LikersModal` component handles likers for posts, comments, and replies by accepting a `type` prop. This eliminates code duplication and keeps the UI consistent across all three contexts.
+2. **Modular `components/feed/` and `components/post/` directories** — Instead of one large `FeedMiddle.tsx` or `PostCard.tsx`, each concern is split into its own focused component. This makes individual pieces easy to test, maintain, and reason about in isolation.
 
-5. **Axios interceptors for token injection** — Rather than manually attaching the Bearer token in every API call, a request interceptor reads the current token from the Zustand store and attaches it to every outgoing request. A response interceptor catches 401 errors globally and redirects to `/login`, clearing the session.
+3. **`LikersModal` is type-agnostic** — A single `LikersModal` component handles likers for posts, comments, and replies by accepting a `type` prop. This eliminates code duplication and keeps the UI consistent across all three contexts.
 
-6. **Component-level optimistic like state** — Post and comment like state is held in local `useState` (seeded from the API response) rather than in a global store or re-fetching the full list. This prevents the entire feed from re-rendering on every like toggle.
+4. **Axios interceptors for token injection** — Rather than manually attaching the Bearer token in every API call, a request interceptor reads the current token from the Zustand store and attaches it to every outgoing request. A response interceptor catches 401 errors globally and redirects to `/login`, clearing the session.
 
-7. **`FeedMiddle` as orchestrator** — The `FeedMiddle` component contains no logic of its own. It simply composes `DesktopStories`, `MobileStories`, `CreatePost`, and `FeedPosts`. This makes it easy to add, remove, or reorder feed sections in one place.
+5. **Component-level optimistic like state** — Post and comment like state is held in local `useState` (seeded from the API response) rather than in a global store or re-fetching the full list. This prevents the entire feed from re-rendering on every like toggle.
+
+6. **`FeedMiddle` as orchestrator** — The `FeedMiddle` component contains no logic of its own. It simply composes `DesktopStories`, `MobileStories`, `CreatePost`, and `FeedPosts`. This makes it easy to add, remove, or reorder feed sections in one place.
 
 ---
 
