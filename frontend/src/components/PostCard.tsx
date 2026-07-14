@@ -1,20 +1,74 @@
 import { useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { togglePostLike } from '../api/api';
+
+interface PostImage {
+  id: number;
+  image_url: string;
+}
+
+interface PostUser {
+  id: number;
+  first_name: string;
+  last_name: string;
+}
 
 interface Post {
   id: number;
-  author: string;
-  authorImg: string;
-  time: string;
-  title: string;
-  postImg: string;
-  reactions: number;
-  comments: number;
-  shares: number;
+  user?: PostUser;
+  // legacy static fields (kept for backwards compat)
+  author?: string;
+  authorImg?: string;
+  time?: string;
+  title?: string;
+  postImg?: string;
+  reactions?: number;
+  comments?: number;
+  shares?: number;
+  // API fields
+  text_content?: string;
+  is_private?: boolean;
+  images?: PostImage[];
+  likes_count?: number;
+  comments_count?: number;
+  created_at?: string;
 }
 
+const timeAgo = (dateStr: string) => {
+  const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+  if (diff < 60) return `${diff}s ago`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return `${Math.floor(diff / 86400)}d ago`;
+};
+
 const PostCard = ({ post }: { post: Post }) => {
+  const queryClient = useQueryClient();
   const [dropOpen, setDropOpen] = useState(false);
   const [comment, setComment] = useState('');
+
+  const { mutate: handleLike, isPending: liking } = useMutation({
+    mutationFn: () => togglePostLike(post.id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['posts'] }),
+  });
+
+  const authorName = post.user?.first_name + ' ' + post.user?.last_name;
+  const authorImg = '/images/post_img.png';
+  const postTime = post.created_at ? timeAgo(post.created_at) : '';
+  const bodyText = post.text_content ?? '';
+  const isPrivate = post.is_private ?? false;
+  const reactions = post.likes_count ?? 0;
+  const commentsCount = post.comments_count ?? 0;
+  const shares = post.shares ?? 0;
+
+  const postImages: string[] =
+    post.images && post.images.length > 0
+      ? post.images.map((img) => img.image_url)
+      : post.postImg
+        ? [post.postImg]
+        : [];
+
+
 
   return (
     <div className="_feed_inner_timeline_post_area _b_radious6 _padd_b24 _padd_t24 _mar_b16">
@@ -22,12 +76,13 @@ const PostCard = ({ post }: { post: Post }) => {
         <div className="_feed_inner_timeline_post_top">
           <div className="_feed_inner_timeline_post_box">
             <div className="_feed_inner_timeline_post_box_image">
-              <img src={post.authorImg} alt="" className="_post_img" />
+              <img src={authorImg} alt="" className="_post_img" />
             </div>
             <div className="_feed_inner_timeline_post_box_txt">
-              <h4 className="_feed_inner_timeline_post_box_title">{post.author}</h4>
+              <h4 className="_feed_inner_timeline_post_box_title">{authorName}</h4>
               <p className="_feed_inner_timeline_post_box_para">
-                {post.time} . <a href="#0">Public</a>
+                {postTime} .{' '}
+                <a href="#0">{isPrivate ? '🔒 Private' : '🌐 Public'}</a>
               </p>
             </div>
           </div>
@@ -57,11 +112,18 @@ const PostCard = ({ post }: { post: Post }) => {
             )}
           </div>
         </div>
-        <h4 className="_feed_inner_timeline_post_title">{post.title}</h4>
-        <div className="_feed_inner_timeline_image">
-          <img src={post.postImg} alt="" className="_time_img" />
-        </div>
+
+        {bodyText && (
+          <h4 className="_feed_inner_timeline_post_title">{bodyText}</h4>
+        )}
+
+        {postImages.map((src, i) => (
+          <div className="_feed_inner_timeline_image" key={i}>
+            <img src={src} alt="" className="_time_img" />
+          </div>
+        ))}
       </div>
+
       <div className="_feed_inner_timeline_total_reacts _padd_r24 _padd_l24 _mar_b26">
         <div className="_feed_inner_timeline_total_reacts_image">
           <img src="/images/react_img1.png" alt="Image" className="_react_img1" />
@@ -69,17 +131,22 @@ const PostCard = ({ post }: { post: Post }) => {
           <img src="/images/react_img3.png" alt="Image" className="_react_img _rect_img_mbl_none" />
           <img src="/images/react_img4.png" alt="Image" className="_react_img _rect_img_mbl_none" />
           <img src="/images/react_img5.png" alt="Image" className="_react_img _rect_img_mbl_none" />
-          <p className="_feed_inner_timeline_total_reacts_para">{post.reactions}+</p>
+          <p className="_feed_inner_timeline_total_reacts_para">{reactions}+</p>
         </div>
         <div className="_feed_inner_timeline_total_reacts_txt">
           <p className="_feed_inner_timeline_total_reacts_para1">
-            <a href="#0"><span>{post.comments}</span> Comment</a>
+            <a href="#0"><span>{commentsCount}</span> Comment</a>
           </p>
-          <p className="_feed_inner_timeline_total_reacts_para2"><span>{post.shares}</span> Share</p>
+          <p className="_feed_inner_timeline_total_reacts_para2"><span>{shares}</span> Share</p>
         </div>
       </div>
+
       <div className="_feed_inner_timeline_reaction">
-        <button className="_feed_inner_timeline_reaction_emoji _feed_reaction _feed_reaction_active">
+        <button
+          className="_feed_inner_timeline_reaction_emoji _feed_reaction _feed_reaction_active"
+          onClick={() => handleLike()}
+          disabled={liking}
+        >
           <span className="_feed_inner_timeline_reaction_link">
             <span>
               <svg xmlns="http://www.w3.org/2000/svg" width="19" height="19" fill="none" viewBox="0 0 19 19">
@@ -114,6 +181,7 @@ const PostCard = ({ post }: { post: Post }) => {
           </span>
         </button>
       </div>
+
       <div className="_feed_inner_timeline_cooment_area">
         <div className="_feed_inner_comment_box">
           <form className="_feed_inner_comment_box_form" onSubmit={(e) => e.preventDefault()}>

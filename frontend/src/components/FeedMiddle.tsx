@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import PostCard from '../components/PostCard';
+import { createPost, getPosts } from '../api/api';
 
 const stories = [
   { img: '/images/card_ppl1.png', name: 'Your Story', isOwn: true },
@@ -8,33 +10,52 @@ const stories = [
   { img: '/images/card_ppl4.png', name: 'Steve Jobs', isOwn: false },
 ];
 
-const posts = [
-  {
-    id: 1,
-    author: 'Karim Saif',
-    authorImg: '/images/post_img.png',
-    time: '5 minute ago',
-    title: '-Healthy Tracking App',
-    postImg: '/images/timeline_img.png',
-    reactions: 9,
-    comments: 12,
-    shares: 122,
-  },
-  {
-    id: 2,
-    author: 'Karim Saif',
-    authorImg: '/images/post_img.png',
-    time: '10 minute ago',
-    title: '-New Design Concept',
-    postImg: '/images/timeline_img.png',
-    reactions: 15,
-    comments: 8,
-    shares: 45,
-  },
-];
-
 const FeedMiddle = () => {
+  const queryClient = useQueryClient();
   const [postText, setPostText] = useState('');
+  const [isPrivate, setIsPrivate] = useState(false);
+  const [images, setImages] = useState<File[]>([]);
+  const [previews, setPreviews] = useState<string[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // ── Fetch posts ──────────────────────────────────────────────────────────
+  const { data: postsData, isLoading: loadingPosts } = useQuery({
+    queryKey: ['posts'],
+    queryFn: () => getPosts().then((res) => res.data?.data ?? res.data ?? []),
+  });
+  const posts: any[] = postsData ?? [];
+
+  // ── Create post ──────────────────────────────────────────────────────────
+  const { mutate: submitPost, isPending: submitting } = useMutation({
+    mutationFn: () =>
+      createPost({ text_content: postText, is_private: isPrivate, images }),
+    onSuccess: () => {
+      // Invalidate so the feed refetches automatically
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
+      setPostText('');
+      setIsPrivate(false);
+      setImages([]);
+      previews.forEach((p) => URL.revokeObjectURL(p));
+      setPreviews([]);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    },
+  });
+
+  const canPost = postText.trim().length > 0 || images.length > 0;
+
+  // ── Image helpers ────────────────────────────────────────────────────────
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length) return;
+    setImages((prev) => [...prev, ...files]);
+    setPreviews((prev) => [...prev, ...files.map((f) => URL.createObjectURL(f))]);
+  };
+
+  const removeImage = (index: number) => {
+    URL.revokeObjectURL(previews[index]);
+    setImages((prev) => prev.filter((_, i) => i !== index));
+    setPreviews((prev) => prev.filter((_, i) => i !== index));
+  };
 
   return (
     <div className="_layout_middle_wrap">
@@ -148,49 +169,108 @@ const FeedMiddle = () => {
             </div>
           </div>
 
-          {/* Desktop Post Actions */}
+          {/* Image previews */}
+          {previews.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '12px' }}>
+              {previews.map((src, i) => (
+                <div key={i} style={{ position: 'relative' }}>
+                  <img
+                    src={src}
+                    alt={`preview-${i}`}
+                    style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 6 }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeImage(i)}
+                    style={{
+                      position: 'absolute', top: 2, right: 2,
+                      background: 'rgba(0,0,0,0.6)', color: '#fff',
+                      border: 'none', borderRadius: '50%',
+                      width: 20, height: 20, cursor: 'pointer',
+                      fontSize: 11, lineHeight: '20px', textAlign: 'center', padding: 0,
+                    }}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Hidden file input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            style={{ display: 'none' }}
+            onChange={handleImageChange}
+          />
+
+          {/* Post actions */}
           <div className="_feed_inner_text_area_bottom">
             <div className="_feed_inner_text_area_item">
               <div className="_feed_inner_text_area_bottom_photo _feed_common">
-                <button type="button" className="_feed_inner_text_area_bottom_photo_link">
+                <button
+                  type="button"
+                  className="_feed_inner_text_area_bottom_photo_link"
+                  onClick={() => fileInputRef.current?.click()}
+                >
                   <span className="_feed_inner_text_area_bottom_photo_iamge _mar_img">📷</span>
                   Photo
                 </button>
               </div>
               <div className="_feed_inner_text_area_bottom_video _feed_common">
-                <button type="button" className="_feed_inner_text_area_bottom_photo_link">
+                <button
+                  type="button"
+                  className="_feed_inner_text_area_bottom_photo_link"
+                  onClick={() => fileInputRef.current?.click()}
+                >
                   <span className="_feed_inner_text_area_bottom_photo_iamge _mar_img">🎥</span>
                   Video
                 </button>
               </div>
+              {/* Visibility toggle */}
               <div className="_feed_inner_text_area_bottom_event _feed_common">
-                <button type="button" className="_feed_inner_text_area_bottom_photo_link">
-                  <span className="_feed_inner_text_area_bottom_photo_iamge _mar_img">📅</span>
-                  Event
-                </button>
-              </div>
-              <div className="_feed_inner_text_area_bottom_article _feed_common">
-                <button type="button" className="_feed_inner_text_area_bottom_photo_link">
-                  <span className="_feed_inner_text_area_bottom_photo_iamge _mar_img">📝</span>
-                  Article
+                <button
+                  type="button"
+                  className="_feed_inner_text_area_bottom_photo_link"
+                  onClick={() => setIsPrivate((p) => !p)}
+                >
+                  <span className="_feed_inner_text_area_bottom_photo_iamge _mar_img">
+                    {isPrivate ? '🔒' : '🌐'}
+                  </span>
+                  {isPrivate ? 'Private' : 'Public'}
                 </button>
               </div>
             </div>
+
             <div className="_feed_inner_text_area_btn">
-              <button type="button" className="_feed_inner_text_area_btn_link">
+              <button
+                type="button"
+                className="_feed_inner_text_area_btn_link"
+                onClick={() => submitPost()}
+                disabled={submitting || !canPost}
+              >
                 <svg className="_mar_img" xmlns="http://www.w3.org/2000/svg" width="14" height="13" fill="none" viewBox="0 0 14 13">
                   <path fill="#fff" fillRule="evenodd" d="M6.37 7.879l2.438 3.955a.335.335 0 00.34.162c.068-.01.23-.05.289-.247l3.049-10.297a.348.348 0 00-.09-.35.341.341 0 00-.34-.088L1.75 4.03a.34.34 0 00-.247.289.343.343 0 00.16.347L5.666 7.17 9.2 3.597a.5.5 0 01.712.703L6.37 7.88zM9.097 13c-.464 0-.89-.236-1.14-.641L5.372 8.165l-4.237-2.65a1.336 1.336 0 01-.622-1.331c.074-.536.441-.96.957-1.112L11.774.054a1.347 1.347 0 011.67 1.682l-3.05 10.296A1.332 1.332 0 019.098 13z" clipRule="evenodd" />
                 </svg>{' '}
-                <span>Post</span>
+                <span>{submitting ? 'Posting...' : 'Post'}</span>
               </button>
             </div>
           </div>
         </div>
 
-        {/* Posts */}
-        {posts.map((post) => (
-          <PostCard key={post.id} post={post} />
-        ))}
+        {/* Feed */}
+        {loadingPosts ? (
+          <p style={{ textAlign: 'center', color: '#999' }}>Loading posts...</p>
+        ) : posts.length === 0 ? (
+          <p style={{ textAlign: 'center', color: '#999' }}>No posts yet. Be the first!</p>
+        ) : (
+          posts.map((post: any) => (
+            <PostCard key={post.id} post={post} />
+          ))
+        )}
       </div>
     </div>
   );

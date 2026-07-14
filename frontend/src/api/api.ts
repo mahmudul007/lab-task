@@ -66,16 +66,21 @@ export const logOut = () => {
   return api.get("/auth/logout");
 };
 export const createPost = (data: CreatePostData): Promise<any> => {
-  return api.post("/posts", data);
+  const formData = new FormData();
+  formData.append("text_content", data.text_content ?? "");
+  formData.append("is_private", data.is_private ? "1" : "0");
+  if (data.images) {
+    data.images.forEach((img) => formData.append("images[]", img));
+  }
+  return api.post("/posts", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
 };
 export const getPosts = () => {
   return api.get("/posts");
 };
-export const postLike = (postId: string) => {
-  return api.post(`/posts/${postId}/like`);
-};
-export const postUnlike = (postId: string) => {
-  return api.delete(`/posts/${postId}/like`);
+export const togglePostLike = (postId: string | number) => {
+  return api.get(`/posts/${postId}/like`);
 };
 export const commentPost = (postId: string, comment: string) => {
   return api.post(`/posts/${postId}/comment`, { comment });
