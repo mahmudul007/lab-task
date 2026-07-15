@@ -87,7 +87,9 @@ export const ReplyItem = ({ reply, onDelete, isDeleting }: ReplyItemProps) => {
                 {reply.created_at ? timeAgo(reply.created_at) : ''}
               </span>
             </li>
+            {reply.user_can_delete && (
             <li>
+
               <button
                 type="button"
                 onClick={() => onDelete(reply.id)}
@@ -104,6 +106,7 @@ export const ReplyItem = ({ reply, onDelete, isDeleting }: ReplyItemProps) => {
                 Delete
               </button>
             </li>
+            )}
           </ul>
         </div>
       </div>
