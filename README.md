@@ -34,7 +34,8 @@ This application is a Facebook-style social feed where users can:
 - Like / unlike posts and comments
 - Comment on posts and reply to comments (nested threads)
 - View who liked a post, comment, or reply in a modal
-- Scroll infinitely through posts, comments, and replies without manually clicking "load more"
+- Load more comments on demand with a button, and scroll infinitely through posts and replies
+- Delete their own comments using a conditionally visible delete button
 
 ---
 
@@ -176,9 +177,9 @@ All protected routes require the `Authorization: Bearer <token>` header.
 
 | Method | Endpoint                              | Description                             |
 |--------|---------------------------------------|-----------------------------------------|
-| GET    | `/api/posts/{postId}/comments?page=1` | Paginated comments for a post           |
+| GET    | `/api/posts/{postId}/comments?page=1` | Paginated comments for a post (each item includes `user_can_delete`) |
 | POST   | `/api/posts/{postId}/comments`        | Add a comment to a post                 |
-| DELETE | `/api/comments/{commentId}`           | Delete a comment or reply               |
+| DELETE | `/api/comments/{commentId}`           | Delete own comment (owner only)         |
 | GET    | `/api/comments/{commentId}/replies?page=1` | Paginated replies for a comment    |
 | POST   | `/api/comments/{commentId}/replies`   | Reply to a comment                      |
 | POST   | `/api/comments/{commentId}/like`      | Toggle like on a comment or reply       |
@@ -212,6 +213,8 @@ All protected routes require the `Authorization: Bearer <token>` header.
 5. **Configurable `paginate` parameter** — Each list endpoint accepts a `paginate` query parameter to override the default page size, giving clients flexibility without requiring API versioning.
 
 6. **`ON DELETE CASCADE`** — Comment and like tables use cascade deletes so that when a post or parent comment is deleted, all related child records (replies, likes) are automatically removed at the database level, keeping the database clean without extra application logic.
+
+7. **`user_can_delete` authorization flag** — `CommentResource` includes `user_can_delete: (comment.user_id === auth()->id())` on every comment returned by the index endpoint. The frontend reads this boolean to conditionally render the Delete button, keeping ownership logic in one place on the server.
 
 ---
 
@@ -272,8 +275,8 @@ The `FeedMiddle` component is kept as a thin **orchestrator** — it simply rend
 | Component | Responsibility |
 |---|---|
 | `PostCard` | Renders post header, body, images, reaction summary, and action buttons. Manages optimistic like state locally. Triggers `LikersModal` on the like-count badge. |
-| `CommentSection` | Fetches comments with `useInfiniteQuery`, handles comment creation via `useMutation` |
-| `CommentItem` | Renders a single comment. Manages optimistic comment-like state. Triggers `LikersModal` and toggles `ReplySection` |
+| `CommentSection` | Fetches comments with `useInfiniteQuery`, handles comment creation via `useMutation`. Shows a **Load more comments** button when more pages exist |
+| `CommentItem` | Renders a single comment with like / reply actions. Shows **Delete** only when `comment.user_can_delete === true` |
 | `ReplySection` | Fetches replies with `useInfiniteQuery`, handles reply creation via `useMutation` |
 | `ReplyItem` | Renders a single reply. Manages optimistic reply-like state. Triggers `LikersModal` |
 | `LikersModal` | A reusable modal that accepts `type: 'post' | 'comment'` and `id`, fetches likers via `useInfiniteQuery`, and supports infinite scroll within the modal itself |
@@ -304,6 +307,10 @@ The `FeedMiddle` component is kept as a thin **orchestrator** — it simply rend
 5. **Component-level optimistic like state** — Post and comment like state is held in local `useState` (seeded from the API response) rather than in a global store or re-fetching the full list. This prevents the entire feed from re-rendering on every like toggle.
 
 6. **`FeedMiddle` as orchestrator** — The `FeedMiddle` component contains no logic of its own. It simply composes `DesktopStories`, `MobileStories`, `CreatePost`, and `FeedPosts`. This makes it easy to add, remove, or reorder feed sections in one place.
+
+7. **Manual "Load more" for comments** — The comment list uses an explicit **Load more comments** button instead of `IntersectionObserver`. Because comment threads live inside a post card, auto-triggering on viewport intersection fires prematurely as users scroll the feed; a button gives deliberate control.
+
+8. **Server-authoritative delete visibility** — The Delete button in `CommentItem` renders only when `comment.user_can_delete` is `true`. This value is set by `CommentResource` (`user_id === Auth::id()`), so ownership logic lives entirely on the server and the frontend simply reflects it.
 
 ---
 

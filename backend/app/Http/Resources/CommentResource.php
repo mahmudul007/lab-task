@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Auth;
 
 class CommentResource extends JsonResource
 {
@@ -26,6 +27,7 @@ class CommentResource extends JsonResource
             'like_count' => $this->whenLoaded('commentLikes', $this->commentLikes->count()),
             'is_liked_by_me' => $this->whenLoaded('commentLikes', $this->commentLikes->contains('user_id', auth()->user()->id)),
             'reply_count' => $this->whenLoaded('replies', $this->replies->count()),
+            'user_can_delete' => $this->user_id === Auth::id(),
         ];
     }
 }

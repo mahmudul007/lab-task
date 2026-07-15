@@ -23,7 +23,7 @@ class CommentController extends Controller
 
     public function index(Request $request, $postId)
     {
-        $userId =auth()->user()->id;
+        $userId = Auth::id();
         $this->checkPostVisibility($postId, $userId);
         $paginate = $request->input('paginate', 20);
 
@@ -38,7 +38,7 @@ class CommentController extends Controller
 
     public function store(Request $request, $postId)
     {
-        $userId= Auth::user()->id;
+        $userId = Auth::id();
         $this->checkPostVisibility($postId, $userId);
 
         $validated = $request->validate(['text_content' => 'required|string|max:2000']);
@@ -65,7 +65,7 @@ class CommentController extends Controller
 
     public function reply(Request $request, $commentId)
     {
-        $userId = auth()->user()->id;
+        $userId = Auth::id();
         $parentComment = Comment::findOrFail($commentId);
         $this->checkPostVisibility($parentComment->post_id, $userId);
 
@@ -82,7 +82,7 @@ class CommentController extends Controller
 
     public function toggleLike(Request $request, $commentId)
     {
-        $userId = auth()->user()->id;
+        $userId = Auth::id();
 
         if (!Comment::where('id', $commentId)->exists()) {
             return response()->json(['error' => 'Comment not found'], 404);
@@ -110,9 +110,11 @@ class CommentController extends Controller
            return response()->json(['data' => $likers]);
     }
 
-    public function destroy(Request $request, $commentId)
+    public function destroy($commentId)
     {
-        $comment = Comment::where('id', $commentId)->where('user_id', auth()->user()->id)->firstOrFail();
+
+        $comment = Comment::where('id', $commentId)->where('user_id', Auth::id())->firstOrFail();
+
         $comment->delete(); 
         return response()->json(['message' => 'Comment deleted']);
     }

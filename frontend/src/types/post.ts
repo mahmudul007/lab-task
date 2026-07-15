@@ -26,6 +26,7 @@ export interface Comment {
   like_count?: number;
   is_liked_by_me?: boolean;
   reply_count?: number;
+  user_can_delete?: boolean;
 }
 
 // Matches PostResource fields

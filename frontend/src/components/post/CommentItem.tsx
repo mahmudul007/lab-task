@@ -129,23 +129,25 @@ export const CommentItem = ({ comment, postId, onDelete, isDeleting }: CommentIt
                     {comment.created_at ? timeAgo(comment.created_at) : ''}
                   </span>
                 </li>
-                <li>
-                  <button
-                    type="button"
-                    onClick={() => onDelete(comment.id)}
-                    disabled={isDeleting}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                      padding: 0,
-                      color: '#e74c3c',
-                      fontSize: 12,
-                    }}
-                  >
-                    Delete
-                  </button>
-                </li>
+                {comment.user_can_delete && (
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => onDelete(comment.id)}
+                      disabled={isDeleting}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: 0,
+                        color: '#e74c3c',
+                        fontSize: 12,
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </li>
+                )}
               </ul>
             </div>
           </div>

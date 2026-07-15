@@ -3,7 +3,6 @@ import { useMutation, useInfiniteQuery, useQueryClient } from '@tanstack/react-q
 import { getPostComments, commentPost, postCommentDelete } from '../../api/api';
 import type { Post, Comment } from '@/types/post';
 import { CommentItem } from './CommentItem';
-import { InfiniteScrollTrigger } from '../feed/InfiniteScrollTrigger';
 
 interface CommentSectionProps {
   post: Post;
@@ -135,14 +134,33 @@ export const CommentSection = ({ post }: CommentSectionProps) => {
                 isDeleting={deletingComment}
               />
             ))}
-            <InfiniteScrollTrigger
-              onIntersect={fetchNextPage}
-              hasNextPage={!!hasNextPage}
-              isFetchingNextPage={isFetchingNextPage}
-            />
+            {/* ── Load More button ── */}
+            {hasNextPage && (
+              <div style={{ textAlign: 'center', marginTop: 8 }}>
+                <button
+                  type="button"
+                  onClick={() => fetchNextPage()}
+                  disabled={isFetchingNextPage}
+                  style={{
+                    background: 'none',
+                    border: '1px solid #ddd',
+                    borderRadius: 6,
+                    padding: '6px 18px',
+                    cursor: 'pointer',
+                    fontSize: 13,
+                    color: '#1877f2',
+                    fontWeight: 500,
+                  }}
+                >
+                  {isFetchingNextPage ? 'Loading…' : 'Load more comments'}
+                </button>
+              </div>
+            )}
           </>
         )}
       </div>
     </div>
   );
 };
+
+
