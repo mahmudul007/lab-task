@@ -24,9 +24,9 @@ class CommentResource extends JsonResource
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
             'user' => $this->whenLoaded('user'),
-            'like_count' => $this->whenLoaded('commentLikes', $this->commentLikes->count()),
-            'is_liked_by_me' => $this->whenLoaded('commentLikes', $this->commentLikes->contains('user_id', auth()->user()->id)),
-            'reply_count' => $this->whenLoaded('replies', $this->replies->count()),
+            'like_count' => $this->whenLoaded('commentLikes', fn() => $this->commentLikes->count()),
+            'is_liked_by_me' => $this->whenLoaded('commentLikes', fn() => $this->commentLikes->contains('user_id', Auth::id())),
+            'reply_count' => $this->whenLoaded('replies', fn() => $this->replies->count()),
             'user_can_delete' => $this->user_id === Auth::id(),
         ];
     }

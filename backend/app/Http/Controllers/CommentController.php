@@ -27,7 +27,7 @@ class CommentController extends Controller
         $this->checkPostVisibility($postId, $userId);
         $paginate = $request->input('paginate', 20);
 
-        $comments = Comment::with('user')
+        $comments = Comment::with(['user', 'commentLikes'])
             ->where('post_id', $postId)
             ->whereNull('parent_comment_id')
             ->orderBy('created_at', 'desc')
@@ -55,7 +55,7 @@ class CommentController extends Controller
     public function replies(Request $request, $commentId)
     {
 
-        $replies = Comment::with('user')
+        $replies = Comment::with(['user', 'commentLikes'])
             ->where('parent_comment_id', $commentId)
             ->orderBy('created_at', 'desc')
             ->paginate(20);
