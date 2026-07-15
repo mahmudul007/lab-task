@@ -254,6 +254,7 @@ frontend/src/
 ├── types/
 │   └── post.ts                   # TypeScript interfaces
 └── App.tsx                       # Router + QueryClientProvider root
+.env
 ```
 
 ### Component Structure
