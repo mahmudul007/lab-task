@@ -338,7 +338,10 @@ SANCTUM_STATEFUL_DOMAINS=localhost:5173
 ### Frontend (`.env`)
 
 ```env
-VITE_ENVIRONMENT=local
-VITE_BASE_URL=http://127.0.0.1:8000/api
-VITE_PROD_URL=https://your-production-api.com/api
+VITE_ENVIRONMENT=prod
+VITE_BASE_URL=http://localhost:8000/api
+VITE_PROD_URL=https://api.task.sweethotel.xyz/api
+VITE_MEDIA_LOCAL_URL=http://localhost:8000
+VITE_MEDIA_PROD_URL=https://api.task.sweethotel.xyz
+
 ```
