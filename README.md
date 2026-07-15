@@ -1,4 +1,4 @@
-# Appify Lab – Social Feed Application
+# Buddy Script– Social Feed Application
 
 A full-stack social feed application with authenticated posts, nested comments & replies, like interactions, and real-time infinite-scroll pagination. Built with **Laravel 11 (API)** on the backend and **React + Vite** on the frontend.
 
